@@ -3,7 +3,7 @@ import csv
 import datetime
 import os.path
 ser = serial.Serial('/dev/ttyUSB0',9600,timeout=10)
-CorrectionValue = 0.854983739837398
+CorrectionValue = 0.854983739837398 #補正値
 
 def myfunc():
     if not hasattr(myfunc, "counter"):
