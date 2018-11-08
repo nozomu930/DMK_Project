@@ -14,6 +14,7 @@ def myfunc():
 def GetPowerData(strData):
     DelimiterIndex = strData.find('?')
     DIndex_Dollar = strData.rfind('$')
+    lastindex = strData.rfind('.')
     XBeesID = strData[DIndex_Dollar+1 : DelimiterIndex]
     CsvList = []
 
@@ -22,8 +23,12 @@ def GetPowerData(strData):
     #DateHMS = '{0:%H%M%S}'.format(now)
     #counter = myfunc()
     CsvList.append(DateHMS)
-    for count in range(0,10,3):
-        tmp = strData[DelimiterIndex+(1+count) : DelimiterIndex+(4+count)]
+
+    DMKdata_ls = strData[DelimiterIndex+1:]
+    DMKdata_ls_3char = list(zip(*[iter(DMKdata_ls)]*3))
+    print(DMKdata_ls_3char)
+
+    for tmp in DMKdata_ls_3char:
         decrypt1 = ord(tmp[0]) - 48 #(0x30)16 = (48)10
         decrypt2 = (ord(tmp[1]) - 48) & 0x3F
         decrypt3 = (ord(tmp[2]) - 48) & 0x3F
