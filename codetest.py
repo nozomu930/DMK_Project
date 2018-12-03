@@ -15,6 +15,7 @@ def myfunc():
 def my_index_multi(l, x):
     return [i for i, _x in enumerate(l) if _x == x]
 
+#引数(ASCII文字のリスト)　例: 適['D','M','K']　不適['0x44','0x4d','0x4b']
 def calculatechksum(p):
   s = 0x00
   for i in range(3, len(p)):
@@ -105,6 +106,61 @@ def GetPowerData(powerdata_ls):
         print(PowerData)
         CsvList.append(PowerData)
 
+def ConvertHexlitoCHRli(li):
+    hex_li_chr=[]
+    for tmp in li:
+        hex_li_chr.append(chr(tmp))
+    return hex_li_chr
+
+def CreateFrame(address,RFdata):
+    #APIフレームデータの初期値
+    start_delimiter = "0x7E"
+    length_M = "0x00"
+    length_L = "0x00"
+    frame_type = "0x10"
+    frame_id = "0x01"
+    destination_address_16bit = ["0xFF","0xFE"]
+    broadcast_radius = "0x00"
+    options = "0x00"
+
+    #引数のaddressを16進文字列に変換しリスト化する
+    address_2chr = list(zip(*[iter(address)]*2))
+    destination_address_64bit = []
+    for tmp in address_2chr:
+        hex_tmp = tmp[0] + tmp[1]
+        hex_str = '0x' + hex_tmp
+        destination_address_64bit.append(hex_str)
+
+    #引数のRFdataを16進数文字列に変換しリスト化する
+    RFdata_li = []
+    for tmp in RFdata:
+        hex_str = hex(ord(tmp))
+        RFdata_li.append(hex_str)   
+
+    #frameの仮結合
+    frame_tmp = [frame_type,frame_id] + destination_address_64bit + destination_address_16bit + [broadcast_radius,options] + RFdata_li
+
+    #データ長の計算
+    frame_len = hex(len(frame_tmp))
+    frame_len = (frame_len[2:]).rjust(4,'0')
+    length_M = '0x' + frame_len[0] + frame_len[1]
+    length_L = '0x' + frame_len[2] + frame_len[3]
+
+    #データ長(下位)、データ長(上位)、開始コードの順にリストに追加
+    frame_tmp.insert(0,length_L)
+    frame_tmp.insert(0,length_M)
+    frame_tmp.insert(0,start_delimiter)
+
+    #チェックサムの計算
+    frame_tmp_int = [int(s, 16) for s in frame_tmp]
+    chksum = hex(ord(calculatechksum(ConvertHexlitoCHRli(frame_tmp_int))))
+    frame_tmp.append(chksum)
+
+    return frame_tmp
+
+
+
+
 """
 #string = "7E001610010013A20040AE1AC3FFFE000024444D4B3030313FA1"
 string = "7E001610010013A20040AE1AC3FFFE000024444D4B3030313F"
@@ -114,6 +170,33 @@ packet_ls = CreatePacketLs(string)
 
 packet_hex_int_ls = CreatePacketHexLs(packet_ls)
 #print(packet_hex_int_ls)
+"""
+
+#DMK_li = ['DMKEE01','0013A20040AE1AC3','DMKEE02','0013A20040AE1ABB']
+#DMK_li = {'DMKEE01':'0013A20040AE1AC3','DMKEE02':'0013A20040AE1ABB'}
+#DMK_module_li = list(zip(*[iter(DMK_li)]*2))
+#print(DMK_li['DMKEE01'])
+
+DMK_dictionary = {}
+with open("config/DMKModuleList.csv","r") as f:
+    reader = csv.DictReader(f)
+
+    for row in reader:
+        DMK_dictionary[row['name']] = row['address']
+
+
+print(DMK_dictionary['DMKEE01'])
+
+frame = CreateFrame(DMK_dictionary['DMKEE01'],'#DMKEE01?')
+print(frame)
+frame = CreateFrame(DMK_dictionary['DMKEE02'],'#DMKEE02?')
+print(frame)
+
+"""
+frame = CreateFrame(DMK_module_li[0][1],'#DMKEE01?')
+print(frame)
+frame = CreateFrame(DMK_module_li[1][1],'#DMKEE02?')
+print(frame)
 """
 
 while 1:
