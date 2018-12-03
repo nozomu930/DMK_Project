@@ -158,46 +158,24 @@ def CreateFrame(address,RFdata):
 
     return frame_tmp
 
+def CreateDMKDictionary(csv_url):
+    #csvファイルの読み込み
+    dic = {}
+    with open(csv_url,"r") as f:
+        reader = csv.DictReader(f)
+
+        for row in reader:
+            dic[row['name']] = row['address']
+    return dic
 
 
 
-"""
-#string = "7E001610010013A20040AE1AC3FFFE000024444D4B3030313FA1"
-string = "7E001610010013A20040AE1AC3FFFE000024444D4B3030313F"
-
-packet_ls = CreatePacketLs(string)
-#print(packet_ls)
-
-packet_hex_int_ls = CreatePacketHexLs(packet_ls)
-#print(packet_hex_int_ls)
-"""
-
-#DMK_li = ['DMKEE01','0013A20040AE1AC3','DMKEE02','0013A20040AE1ABB']
-#DMK_li = {'DMKEE01':'0013A20040AE1AC3','DMKEE02':'0013A20040AE1ABB'}
-#DMK_module_li = list(zip(*[iter(DMK_li)]*2))
-#print(DMK_li['DMKEE01'])
-
-DMK_dictionary = {}
-with open("config/DMKModuleList.csv","r") as f:
-    reader = csv.DictReader(f)
-
-    for row in reader:
-        DMK_dictionary[row['name']] = row['address']
-
-
-print(DMK_dictionary['DMKEE01'])
+DMK_dictionary = CreateDMKDictionary("config/DMKModuleList.csv")
 
 frame = CreateFrame(DMK_dictionary['DMKEE01'],'#DMKEE01?')
 print(frame)
 frame = CreateFrame(DMK_dictionary['DMKEE02'],'#DMKEE02?')
 print(frame)
-
-"""
-frame = CreateFrame(DMK_module_li[0][1],'#DMKEE01?')
-print(frame)
-frame = CreateFrame(DMK_module_li[1][1],'#DMKEE02?')
-print(frame)
-"""
 
 while 1:
     respons_string = demi_SendSerial()
@@ -218,6 +196,39 @@ while 1:
 
 
 
+
+"""
+#string = "7E001610010013A20040AE1AC3FFFE000024444D4B3030313FA1"
+string = "7E001610010013A20040AE1AC3FFFE000024444D4B3030313F"
+
+packet_ls = CreatePacketLs(string)
+#print(packet_ls)
+
+packet_hex_int_ls = CreatePacketHexLs(packet_ls)
+#print(packet_hex_int_ls)
+"""
+
+#DMK_li = ['DMKEE01','0013A20040AE1AC3','DMKEE02','0013A20040AE1ABB']
+#DMK_li = {'DMKEE01':'0013A20040AE1AC3','DMKEE02':'0013A20040AE1ABB'}
+#DMK_module_li = list(zip(*[iter(DMK_li)]*2))
+#print(DMK_li['DMKEE01'])
+
+"""
+#csvファイルの読み込み
+DMK_dictionary = {}
+with open("config/DMKModuleList.csv","r") as f:
+    reader = csv.DictReader(f)
+
+    for row in reader:
+        DMK_dictionary[row['name']] = row['address']
+"""
+
+"""
+frame = CreateFrame(DMK_module_li[0][1],'#DMKEE01?')
+print(frame)
+frame = CreateFrame(DMK_module_li[1][1],'#DMKEE02?')
+print(frame)
+"""
 
 
 """
