@@ -2,11 +2,16 @@ import serial
 import csv
 import datetime
 import os.path
+from time import sleep
 from digi.xbee.devices import XBeeDevice
 from digi.xbee.devices import RemoteXBeeDevice
 from digi.xbee.devices import XBee64BitAddress
 from digi.xbee.devices import ZigBeeDevice
 from digi.xbee.devices import XBeeMessage
+from digi.xbee.devices import XBeeException
+from digi.xbee.devices import TimeoutException
+from digi.xbee.devices import XBeeNetwork
+from digi.xbee.devices import DiscoveryOptions
 
 PORT = '/dev/ttyUSB0'
 BAUD_RATE = 9600
@@ -68,30 +73,33 @@ def GetPowerData(strData):
     #WriteCSV(CsvList,XBeesID)
     return CsvList
 
-def main():
-    try:
-        device.open()
-        print("Device is opened")
+def SendCallMessage(remote_device,call_message):
+    #ブロードキャストで送る場合
+    #device.send_data_broadcast("Hello XBee World!")
+    
+    #ポーリング処理
+    SEND_RETRY = 3
+    for i in range(1,SEND_RETRY+1):
+        try:
+            # Send data using the remote object.
+            device.send_data(remote_device, call_message)
 
-        DMK_dictionary = CreateDMKDictionary("config/DMKModuleList.csv")
-        #frame = CreateFrame(DMK_dictionary['DMKEE01'],'#DMKEE01?')
-        #print(frame)
+        except TimeoutException:
+            print("Timeout occurred")
+            sleep(i*5) #sec
 
-        # Instantiate a remote XBee device object.
-        remote_device = RemoteXBeeDevice(device,XBee64BitAddress.from_hex_string(DMK_dictionary['DMKEE01']))
+        except XBeeException as e:
+            print(e)
+            print(type(e))
 
-        if remote_device is None:
-            print("Could not find the remote local_xbee")
-            exit(1)
+        else:
+            print("Send success")
+            li = GetXBeeReadMessage()
+            print(li)
+            break
 
-        #ブロードキャストで送る場合
-        #device.send_data_broadcast("Hello XBee World!")
-
-        # Send data using the remote object.
-        device.send_data(remote_device, "#DMKEE01?")
-        print("Send success")
-
-        while True:   
+def GetXBeeReadMessage():
+    while True:   
             # Read data.
             xbee_message = device.read_data(None)
             if xbee_message is not None:
@@ -101,8 +109,91 @@ def main():
                 timestamp = xbee_message.timestamp
                 print(data.decode())
                 li = GetPowerData(data.decode())
-                print(li)
+                #print(li)
                 break
+    return li
+
+def SearchXBeeNetwork():
+    # Get the network.
+    xnet = device.get_network()
+    # Configure the discovery options.
+    xnet.set_discovery_options({DiscoveryOptions.DISCOVER_MYSELF, DiscoveryOptions.APPEND_DD})
+    # Configure the discovery timeout, in SECONDS.
+    xnet.set_discovery_timeout(25)
+    
+    # Start the discovery process and wait for it to be over.
+    xnet.start_discovery_process()
+    while xnet.is_discovery_running():
+        sleep(0.5)
+
+    # Get a list of the devices added to the network.
+    devices = xnet.get_devices()
+    print(devices)
+
+def main():
+    try:
+        device.open()
+        print("Device is opened")
+
+        DMK_dictionary = CreateDMKDictionary("config/DMKModuleList.csv")
+        #frame = CreateFrame(DMK_dictionary['DMKEE01'],'#DMKEE01?')
+        #print(frame)
+
+        for tmp in DMK_dictionary:
+            remote_address = DMK_dictionary[tmp]
+            call_message = '#' + tmp + '?'
+
+            # Instantiate a remote XBee device object.
+            #remote_device = RemoteXBeeDevice(device,XBee64BitAddress.from_hex_string(DMK_dictionary['DMKEE01']))
+            remote_device = RemoteXBeeDevice(device,XBee64BitAddress.from_hex_string(remote_address))
+
+            if remote_device is None:
+                print("Could not find the remote local_xbee")
+                exit(1)
+
+            SendCallMessage(remote_device,call_message)
+
+
+            """
+            #ブロードキャストで送る場合
+            #device.send_data_broadcast("Hello XBee World!")
+            
+            #ポーリング処理
+            SEND_RETRY = 3
+            for i in range(1,SEND_RETRY+1):
+                try:
+                    # Send data using the remote object.
+                    device.send_data(remote_device, "#DMKEE01?")
+
+                except TimeoutException:
+                    print("Timeout occurred")
+                    sleep(i*5) #sec
+
+                except XBeeException as e:
+                    print(e)
+                    print(type(e))
+
+                else:
+                    print("Send success")
+                    li = GetXBeeReadMessage()
+                    print(li)
+                    break
+            """
+
+            """
+            while True:   
+                # Read data.
+                xbee_message = device.read_data(None)
+                if xbee_message is not None:
+                    #remote_device = xbee_message.remote_device
+                    data = xbee_message.data
+                    is_broadcast = xbee_message.is_broadcast
+                    timestamp = xbee_message.timestamp
+                    print(data.decode())
+                    li = GetPowerData(data.decode())
+                    print(li)
+                    break
+            """
 
     finally:
         if device is not None and device.is_open():
