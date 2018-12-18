@@ -2,6 +2,7 @@ import serial
 import csv
 import datetime
 import os.path
+import sys
 from time import sleep
 from digi.xbee.devices import XBeeDevice
 from digi.xbee.devices import RemoteXBeeDevice
@@ -80,6 +81,7 @@ def SendCallMessage(remote_device,call_message):
     #ポーリング処理
     SEND_RETRY = 3
     for i in range(1,SEND_RETRY+1):
+        print(">>>Message:" + call_message[0:len(call_message)-1] + ',' + "Count:" + str(i))
         try:
             # Send data using the remote object.
             device.send_data(remote_device, call_message)
@@ -89,16 +91,19 @@ def SendCallMessage(remote_device,call_message):
             sleep(i*5) #sec
 
         except XBeeException as e:
+            print("XBeeException occurred")
             print(e)
-            print(type(e))
+            #print(type(e))
+            sleep(i*5) #sec
 
         else:
-            print("Send success")
+            print(">>>Send success")
             li = GetXBeeReadMessage()
             print(li)
             break
 
 def GetXBeeReadMessage():
+    """
     while True:   
             # Read data.
             xbee_message = device.read_data(None)
@@ -111,7 +116,24 @@ def GetXBeeReadMessage():
                 li = GetPowerData(data.decode())
                 #print(li)
                 break
-    return li
+    """
+
+    try:
+        xbee_message = device.read_data(10)
+
+    except TimeoutException:
+        print("Timeout occurred")
+
+    else:
+        data = xbee_message.data
+        is_broadcast = xbee_message.is_broadcast
+        timestamp = xbee_message.timestamp
+        print(data.decode())
+        li = GetPowerData(data.decode())
+        return li
+
+    finally:
+        print("GetMethod finished")
 
 def SearchXBeeNetwork():
     # Get the network.
@@ -133,67 +155,32 @@ def SearchXBeeNetwork():
 def main():
     try:
         device.open()
+
+    except remote_device is None:
+        print("Could not find the remote local_xbee")
+        exit(1)
+
+    else:
         print("Device is opened")
 
-        DMK_dictionary = CreateDMKDictionary("config/DMKModuleList.csv")
+        DMK_dictionary = CreateDMKDictionary("config/DMKModuleList2.csv")
         #frame = CreateFrame(DMK_dictionary['DMKEE01'],'#DMKEE01?')
         #print(frame)
+        try:
+            while 1:
+                for tmp in DMK_dictionary:
+                    remote_address = DMK_dictionary[tmp]
+                    call_message = '#' + tmp + '?' + chr(0x0d)
 
-        for tmp in DMK_dictionary:
-            remote_address = DMK_dictionary[tmp]
-            call_message = '#' + tmp + '?'
-
-            # Instantiate a remote XBee device object.
-            #remote_device = RemoteXBeeDevice(device,XBee64BitAddress.from_hex_string(DMK_dictionary['DMKEE01']))
-            remote_device = RemoteXBeeDevice(device,XBee64BitAddress.from_hex_string(remote_address))
-
-            if remote_device is None:
-                print("Could not find the remote local_xbee")
-                exit(1)
-
-            SendCallMessage(remote_device,call_message)
-
-
-            """
-            #ブロードキャストで送る場合
-            #device.send_data_broadcast("Hello XBee World!")
-            
-            #ポーリング処理
-            SEND_RETRY = 3
-            for i in range(1,SEND_RETRY+1):
-                try:
-                    # Send data using the remote object.
-                    device.send_data(remote_device, "#DMKEE01?")
-
-                except TimeoutException:
-                    print("Timeout occurred")
-                    sleep(i*5) #sec
-
-                except XBeeException as e:
-                    print(e)
-                    print(type(e))
-
-                else:
-                    print("Send success")
-                    li = GetXBeeReadMessage()
-                    print(li)
-                    break
-            """
-
-            """
-            while True:   
-                # Read data.
-                xbee_message = device.read_data(None)
-                if xbee_message is not None:
-                    #remote_device = xbee_message.remote_device
-                    data = xbee_message.data
-                    is_broadcast = xbee_message.is_broadcast
-                    timestamp = xbee_message.timestamp
-                    print(data.decode())
-                    li = GetPowerData(data.decode())
-                    print(li)
-                    break
-            """
+                    # Instantiate a remote XBee device object.
+                    #remote_device = RemoteXBeeDevice(device,XBee64BitAddress.from_hex_string(DMK_dictionary['DMKEE01']))
+                    remote_device = RemoteXBeeDevice(device,XBee64BitAddress.from_hex_string(remote_address))
+                    SendCallMessage(remote_device,call_message)
+        except KeyboardInterrupt:
+            print('interrupted')
+            device.close()
+            print("Device is closed")
+            sys.exit
 
     finally:
         if device is not None and device.is_open():
@@ -219,4 +206,46 @@ PROFILE_ID = 0x1234
 # Send explicit data using the remote object.
 device.send_expl_data(remote_device, DATA_TO_SEND, SOURCE_ENDPOINT,
                         DESTINATION_ENDPOINT, CLUSTER_ID, PROFILE_ID)
+"""
+
+
+"""
+#ブロードキャストで送る場合
+#device.send_data_broadcast("Hello XBee World!")
+
+#ポーリング処理
+SEND_RETRY = 3
+for i in range(1,SEND_RETRY+1):
+    try:
+        # Send data using the remote object.
+        device.send_data(remote_device, "#DMKEE01?")
+
+    except TimeoutException:
+        print("Timeout occurred")
+        sleep(i*5) #sec
+
+    except XBeeException as e:
+        print(e)
+        print(type(e))
+
+    else:
+        print("Send success")
+        li = GetXBeeReadMessage()
+        print(li)
+        break
+"""
+
+"""
+while True:   
+    # Read data.
+    xbee_message = device.read_data(None)
+    if xbee_message is not None:
+        #remote_device = xbee_message.remote_device
+        data = xbee_message.data
+        is_broadcast = xbee_message.is_broadcast
+        timestamp = xbee_message.timestamp
+        print(data.decode())
+        li = GetPowerData(data.decode())
+        print(li)
+        break
 """
