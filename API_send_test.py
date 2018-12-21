@@ -71,7 +71,7 @@ def GetPowerData(strData):
 
         CsvList.append(PowerData)
     #print(tmp)pyth
-    #WriteCSV(CsvList,XBeesID)
+    WriteCSV(CsvList,XBeesID)
     return CsvList
 
 def SendCallMessage(remote_device,call_message):
@@ -103,6 +103,24 @@ def SendCallMessage(remote_device,call_message):
             break
 
 def GetXBeeReadMessage():
+    try:
+        xbee_message = device.read_data(10)
+
+    except Exception as e:
+        #print("Timeout occurred")
+        print(e)
+
+    else:
+        data = xbee_message.data
+        is_broadcast = xbee_message.is_broadcast
+        timestamp = xbee_message.timestamp
+        print(data.decode())
+        li = GetPowerData(data.decode())
+        return li
+
+    finally:
+        print("GetMethod finished")
+
     """
     while True:   
             # Read data.
@@ -117,23 +135,6 @@ def GetXBeeReadMessage():
                 #print(li)
                 break
     """
-
-    try:
-        xbee_message = device.read_data(10)
-
-    except TimeoutException:
-        print("Timeout occurred")
-
-    else:
-        data = xbee_message.data
-        is_broadcast = xbee_message.is_broadcast
-        timestamp = xbee_message.timestamp
-        print(data.decode())
-        li = GetPowerData(data.decode())
-        return li
-
-    finally:
-        print("GetMethod finished")
 
 def SearchXBeeNetwork():
     # Get the network.
@@ -152,6 +153,31 @@ def SearchXBeeNetwork():
     devices = xnet.get_devices()
     print(devices)
 
+def WriteCSV(CsvList,XBeesID):
+    SaveDirectory = 'file/'
+
+    now = datetime.datetime.now()
+    DateYMD = '{0:%Y%m%d}'.format(now) #20170910
+    CsvFileName = SaveDirectory + "PowerData_" + XBeesID + "_" + DateYMD + ".csv"
+    ListFileName = SaveDirectory + "PowerData_List.txt"
+    ListValue = XBeesID + "_" + DateYMD + "\n"
+
+    #f = open('../output.csv', 'a')
+    if os.path.exists(CsvFileName) == True:
+        f = open(CsvFileName, 'a')
+
+    else:
+        f = open(CsvFileName,'w')
+
+        #csvファイルのリスト作製用
+        f_text = open(ListFileName, 'a')
+        f_text.write(ListValue)
+        f_text.close()
+
+    writer = csv.writer(f, lineterminator='\n')
+    writer.writerow(CsvList)
+    f.close()
+
 def main():
     try:
         device.open()
@@ -163,7 +189,7 @@ def main():
     else:
         print("Device is opened")
 
-        DMK_dictionary = CreateDMKDictionary("config/DMKModuleList2.csv")
+        DMK_dictionary = CreateDMKDictionary("config/DMKModuleList3.csv")
         #frame = CreateFrame(DMK_dictionary['DMKEE01'],'#DMKEE01?')
         #print(frame)
         try:
@@ -176,6 +202,7 @@ def main():
                     #remote_device = RemoteXBeeDevice(device,XBee64BitAddress.from_hex_string(DMK_dictionary['DMKEE01']))
                     remote_device = RemoteXBeeDevice(device,XBee64BitAddress.from_hex_string(remote_address))
                     SendCallMessage(remote_device,call_message)
+                    sleep(0.5)
         except KeyboardInterrupt:
             print('interrupted')
             device.close()
