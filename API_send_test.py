@@ -3,6 +3,7 @@ import csv
 import datetime
 import os.path
 import sys
+from DB import AddDataBase,ElectricPower
 from time import sleep
 from digi.xbee.devices import XBeeDevice
 from digi.xbee.devices import RemoteXBeeDevice
@@ -14,8 +15,11 @@ from digi.xbee.devices import TimeoutException
 from digi.xbee.devices import XBeeNetwork
 from digi.xbee.devices import DiscoveryOptions
 
-PORT = '/dev/ttyUSB0'
+#PORT = '/dev/ttyUSB0'
 BAUD_RATE = 9600
+for file in os.listdir('/dev'):
+    if "ttyUSB" in file:
+        PORT = '/dev/'+file
 # Open serial port
 device = XBeeDevice(PORT,BAUD_RATE)
 #device = ZigBeeDevice(PORT, BAUD_RATE)
@@ -46,8 +50,10 @@ def GetPowerData(strData):
     lastindex = strData.rfind('.')
     XBeesID = strData[DIndex_Dollar+1 : DelimiterIndex]
     CsvList = []
+    dblist = []
 
     now = datetime.datetime.now()
+    Date = now.strftime("%Y%m%d/%H%M%S")
     DateHMS = now.strftime("%H%M%S")
     #DateHMS = '{0:%H%M%S}'.format(now)
     #counter = myfunc()
@@ -71,7 +77,17 @@ def GetPowerData(strData):
 
         CsvList.append(PowerData)
     #print(tmp)pyth
+    
+    #csv書き込み
     WriteCSV(CsvList,XBeesID)
+
+    #DBへ追加
+    dblist = CsvList[1:4]
+    module_num = int(XBeesID[len(XBeesID)-2:])
+    dblist.insert(0,Date)
+    dblist.append(module_num)
+    AddDataBase(dblist)
+
     return CsvList
 
 def SendCallMessage(remote_device,call_message):
@@ -203,6 +219,7 @@ def main():
                     remote_device = RemoteXBeeDevice(device,XBee64BitAddress.from_hex_string(remote_address))
                     SendCallMessage(remote_device,call_message)
                     sleep(0.5)
+                #sleep(60) #測定間隔(秒)
         except KeyboardInterrupt:
             print('interrupted')
             device.close()
